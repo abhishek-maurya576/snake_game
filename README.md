@@ -54,7 +54,7 @@ snake_game/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/snake_game.git
+git clone https://github.com/abhishek_maurya576/snake_game.git
 ```
 
 2. Open `index.html` in your browser
