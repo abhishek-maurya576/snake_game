@@ -22,6 +22,11 @@
         <div class="controls">
             <button id="start-btn">Start Game</button>
             <button id="pause-btn">Pause</button>
+            <select id="difficulty" onchange="game.setDifficulty(this.value)">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+            </select>
             <div class="mobile-controls">
                 <button class="mobile-btn up">↑</button>
                 <div class="horizontal-controls">
@@ -33,5 +38,7 @@
         </div>
     </div>
     <script type="module" src="script.js"></script>
+    <script src="js/sounds.js"></script>
+    <script src="js/powerup.js"></script>
 </body>
 </html>
