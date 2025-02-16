@@ -7,6 +7,18 @@ const tileCount = 20;
 canvas.width = gridSize * tileCount;
 canvas.height = gridSize * tileCount;
 
+const POWERUP_TYPES = {
+    SPEED_BOOST: 'speedBoost',
+    SHIELD: 'shield',
+    SCORE_MULTIPLIER: 'scoreMultiplier'
+};
+
+const FOOD_TYPES = {
+    NORMAL: { points: 1, color: '#FF5252' },
+    SPECIAL: { points: 3, color: '#FFD700' },
+    BONUS: { points: 5, color: '#00FFD8' }
+};
+
 let snake = [{x: 10, y: 10}];
 let food = {x: 5, y: 5};
 let direction = {x: 0, y: 0};
@@ -25,6 +37,11 @@ const levels = [
     { speed: 40, obstacles: 12 }
 ];
 let obstacles = [];
+let activePowerup = null;
+let powerupTimeout = null;
+let currentFood = { ...FOOD_TYPES.NORMAL, x: 5, y: 5 };
+let scoreMultiplier = 1;
+let isShieldActive = false;
 
 document.getElementById('high-score').textContent = highScore;
 
@@ -33,6 +50,7 @@ function gameLoop() {
     
     update();
     draw();
+    generatePowerup(); // Add chance to spawn power-up each tick
     setTimeout(gameLoop, gameSpeed);
 }
 
@@ -62,10 +80,16 @@ function update() {
         return;
     }
     
+    // Check power-up collision
+    if (activePowerup && head.x === activePowerup.x && head.y === activePowerup.y) {
+        applyPowerup(activePowerup.type);
+        activePowerup = null;
+    }
+    
     // Check if snake eats food
-    if (head.x === food.x && head.y === food.y) {
+    if (head.x === currentFood.x && head.y === currentFood.y) {
         playSound('eat');
-        score++;
+        score += currentFood.points * scoreMultiplier;
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('highScore', highScore);
@@ -105,9 +129,39 @@ function draw() {
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
     });
     
-    // Draw food
-    ctx.fillStyle = '#FF5252';
-    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+    // Draw food with its specific color
+    ctx.fillStyle = currentFood.color;
+    ctx.fillRect(currentFood.x * gridSize, currentFood.y * gridSize, gridSize, gridSize);
+    
+    // Draw power-up if active
+    if (activePowerup) {
+        ctx.fillStyle = '#FF00FF';
+        ctx.beginPath();
+        ctx.arc(
+            (activePowerup.x * gridSize) + gridSize/2,
+            (activePowerup.y * gridSize) + gridSize/2,
+            gridSize/2,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+    }
+    
+    // Draw shield effect if active
+    if (isShieldActive) {
+        ctx.strokeStyle = '#00FF00';
+        ctx.lineWidth = 2;
+        snake.forEach(segment => {
+            ctx.strokeRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+        });
+    }
+    
+    // Draw score multiplier
+    if (scoreMultiplier > 1) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = '20px Arial';
+        ctx.fillText(`${scoreMultiplier}x`, 10, 20);
+    }
 }
 
 function generateObstacles() {
@@ -127,14 +181,27 @@ function generateObstacles() {
 }
 
 function generateFood() {
-    food = {
-        x: Math.floor(Math.random() * tileCount),
-        y: Math.floor(Math.random() * tileCount)
-    };
+    const random = Math.random();
+    if (random < 0.7) {
+        currentFood = { ...FOOD_TYPES.NORMAL };
+    } else if (random < 0.9) {
+        currentFood = { ...FOOD_TYPES.SPECIAL };
+    } else {
+        currentFood = { ...FOOD_TYPES.BONUS };
+    }
     
-    // Ensure food doesn't spawn on snake
-    while (snake.some(segment => segment.x === food.x && segment.y === food.y)) {
-        food = {
+    do {
+        currentFood.x = Math.floor(Math.random() * tileCount);
+        currentFood.y = Math.floor(Math.random() * tileCount);
+    } while (snake.some(segment => segment.x === currentFood.x && segment.y === currentFood.y));
+}
+
+function generatePowerup() {
+    if (Math.random() < 0.1 && !activePowerup) { // 10% chance to spawn power-up
+        const powerupTypes = Object.values(POWERUP_TYPES);
+        const randomType = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
+        activePowerup = {
+            type: randomType,
             x: Math.floor(Math.random() * tileCount),
             y: Math.floor(Math.random() * tileCount)
         };
@@ -144,6 +211,11 @@ function generateFood() {
 let gameLoopTimeout;
 
 function gameOver() {
+    if (isShieldActive) {
+        // If shield is active, don't end game but remove shield
+        isShieldActive = false;
+        return;
+    }
     playSound('gameOver');
     gameRunning = false;
     gameLoopRunning = false;
@@ -324,6 +396,34 @@ document.getElementById('start-btn').addEventListener('click', () => {
         }
     }
 });
+
+// Add new function to handle power-ups
+function applyPowerup(type) {
+    playSound('powerup');
+    switch(type) {
+        case POWERUP_TYPES.SPEED_BOOST:
+            const originalSpeed = gameSpeed;
+            gameSpeed = gameSpeed / 2;
+            setTimeout(() => {
+                gameSpeed = originalSpeed;
+            }, 5000);
+            break;
+            
+        case POWERUP_TYPES.SHIELD:
+            isShieldActive = true;
+            setTimeout(() => {
+                isShieldActive = false;
+            }, 10000);
+            break;
+            
+        case POWERUP_TYPES.SCORE_MULTIPLIER:
+            scoreMultiplier = 2;
+            setTimeout(() => {
+                scoreMultiplier = 1;
+            }, 15000);
+            break;
+    }
+}
 
 // Initialize game board
 generateFood();
