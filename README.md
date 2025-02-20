@@ -1,4 +1,4 @@
-# Modern Snake Game
+# Modern Snake Game 
 
 A modern implementation of the classic Snake game with enhanced features and realistic graphics using HTML5 Canvas and JavaScript.
 
